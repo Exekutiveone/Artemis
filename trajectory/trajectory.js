@@ -18,19 +18,25 @@ function drawTrajectory(data) {
   const speed = data.series.speed;
   const steering = data.series.steering;
   const accel = data.series.accel || [];
-  const dt = 1; // seconds per sample (assumed)
-  const steerFactor = Math.PI / 180 * 0.05; // convert deg -> rad with factor
+  // The data was generated with one sample per second. Steering angles were
+  // converted to orientation changes by dividing the degree value by five
+  // (see Test_Set.py).  This factor yields a visible path with realistic curves.
+  const dt = 1;
+  const steerFactor = Math.PI / 180 / 5;
 
-  const points = [{x:0, y:0, v:speed[0], a:accel[0]||0}];
+  const points = [{x:0, y:0, v:speed[0], a:accel[0] || 0}];
   let theta = 0;
-  for (let i = 0; i < speed.length; i++) {
-    const ds = speed[i] * dt;
-    const dtheta = steering[i] * steerFactor;
-    theta += dtheta;
+  let v = speed[0];
+  for (let i = 1; i < speed.length; i++) {
+    // integrate acceleration to update the current speed so braking and
+    // acceleration phases affect the travelled distance
+    v += (accel[i - 1] || 0) * dt;
+    const ds = v * dt;
+    theta += steering[i] * steerFactor;
     const prev = points[points.length - 1];
     const x = prev.x + ds * Math.cos(theta);
     const y = prev.y + ds * Math.sin(theta);
-    points.push({x, y, v: speed[i], a: accel[i] || 0});
+    points.push({x, y, v, a: accel[i] || 0});
   }
 
   const xs = points.map(p => p.x);
