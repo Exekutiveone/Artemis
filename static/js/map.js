@@ -1,17 +1,27 @@
 'use strict';
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (!window.sFull || !window.L) return;
+  if (!window.sFull) return;
 
-  const latlngs = sFull.gps_lat.map((lat, i) => [lat, sFull.gps_lon[i]]);
-  const avgLat = latlngs.reduce((sum, ll) => sum + ll[0], 0) / latlngs.length;
-  const avgLon = latlngs.reduce((sum, ll) => sum + ll[1], 0) / latlngs.length;
+  const lats = sFull.gps_lat || [];
+  const lons = sFull.gps_lon || [];
+  if (!lats.length || !lons.length) return;
 
-  const map = L.map('map').setView([avgLat, avgLon], 13);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+  const minLat = Math.min(...lats);
+  const maxLat = Math.max(...lats);
+  const minLon = Math.min(...lons);
+  const maxLon = Math.max(...lons);
 
-  L.polyline(latlngs, { color: 'red' }).addTo(map);
+  const canvas = document.getElementById('mapCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = 'orange';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  lats.forEach((lat, i) => {
+    const x = (lons[i] - minLon) / (maxLon - minLon) * canvas.width;
+    const y = canvas.height - (lat - minLat) / (maxLat - minLat) * canvas.height;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  });
+  ctx.stroke();
 });
