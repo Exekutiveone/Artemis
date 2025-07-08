@@ -32,6 +32,7 @@ function insertChartBoxes() {
     col.innerHTML = `
       <div class="card p-3">
         <div class="chart-container mb-2"><canvas id="${id}"></canvas></div>
+        <div class="chart-container mb-2"><canvas id="lorenz_${id}"></canvas></div>
         <div class="boxplot-container"><canvas id="boxplot_${id}"></canvas></div>
         <div class="stat-box mt-2">
           Mittelwert: <span id="mean_${id}">-</span> |
@@ -40,7 +41,8 @@ function insertChartBoxes() {
           IQA: <span id="iqr_${id}">-</span> |
           Varianz: <span id="var_${id}">-</span> |
           Std-Abw.: <span id="std_${id}">-</span> |
-          V-Koeff.: <span id="vcoeff_${id}">-</span>
+          V-Koeff.: <span id="vcoeff_${id}">-</span><br>
+          Gini: <span id="gini_${id}">-</span>
         </div>
       </div>`;
     container.appendChild(col);
@@ -56,14 +58,6 @@ function insertChartBoxes() {
   pie2.innerHTML = `<div class="card p-3 chart-container"><canvas id="manoeuvre_chart"></canvas></div>`;
   container.appendChild(pie2);
 
-  const lorenz = document.createElement("div");
-  lorenz.className = "col-12";
-  lorenz.innerHTML = `
-    <div class="card p-3">
-      <div class="chart-container"><canvas id="lorenz_chart"></canvas></div>
-      <div class="stat-box mt-2">Gini-Koeffizient: <span id="gini_coef">-</span></div>
-    </div>`;
-  container.appendChild(lorenz);
 }
 
 function buildChart(id, label, data, range) {
@@ -177,8 +171,8 @@ function applyRange() {
     buildBoxplot(range);
   }
 
-  if (typeof buildLorenzChart === 'function') {
-    buildLorenzChart(range);
+  if (typeof buildAllLorenz === 'function') {
+    buildAllLorenz(range);
   }
 }
 
