@@ -4,7 +4,7 @@ import pandas as pd
 from pathlib import Path
 import os
 
-CSV_PATH = Path("fahrtanalyse_daten.csv")
+CSV_PATH = Path(__file__).resolve().parent / "fahrtanalyse_daten.csv"
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
