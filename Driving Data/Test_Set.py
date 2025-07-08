@@ -34,60 +34,123 @@ def classify_manoeuvre(speed, steering, acc):
         return "normal"
 
 def simulate_drive_data(n: int = 1000, seed: int = 42) -> pd.DataFrame:
+    """Simulate a coherent driving route with simple vehicle dynamics."""
+
     rng = np.random.default_rng(seed)
+    dt = 1.0
 
-    speed = np.clip(rng.normal(20, 5, n), 0, None)
-    steering = rng.normal(0, 5, n) - 0.15 * (speed - 20) + rng.normal(0, 1, n)
-    rpm = 180 * speed + rng.normal(0, 100, n)
-    distance = 35 - 0.4 * speed + rng.normal(0, 3, n)
-    lateral_acc = (np.radians(steering) * speed**2) / 9.81 + rng.normal(0, 0.1, n)
-    consumption_rate = 0.002 * speed + 0.001 * np.abs(np.gradient(speed))
-    battery_pct = np.clip(100 - np.cumsum(consumption_rate + rng.normal(0, 0.01, n)), 0, 100)
-    distance_front = np.clip(30 - 0.25 * np.abs(steering) + rng.normal(0, 2, n), 0.5, 100)
+    # Route plan: (duration, target_speed[m/s], steering radius[m] or None)
+    route = [
+        (20, 13.0, None),          # accelerate to ~47 km/h
+        (60, 13.0, None),          # straight section
+        (30, 8.0, 30.0),           # left curve
+        (50, 13.0, None),
+        (25, 8.0, -25.0),          # right curve
+        (15, 0.0, None),           # decelerate to stop
+        (10, 0.0, None),           # wait
+        (25, 15.0, None),
+        (60, 15.0, None),
+        (30, 9.0, -40.0),          # right curve
+        (40, 12.0, None),
+        (30, 9.0, 40.0),           # left curve
+    ]
 
-    accel = np.gradient(speed)
+    # Repeat the route pattern to fill n samples
+    steps = sum(seg[0] for seg in route)
+    reps = max(1, int(np.ceil(n / steps)))
+    route = route * reps
 
-    event_code = [classify_event(s, a, st, d) for s, a, st, d in zip(speed, accel, steering, distance_front)]
-    manoeuvre = [classify_manoeuvre(s, st, a) for s, st, a in zip(speed, steering, accel)]
+    # State variables
+    speed = 0.0
+    heading = 0.0
+    lat = 48.775845
+    lon = 9.182932
+    battery = 100.0
+
+    data = {
+        "speed_m_s": [],
+        "rpm": [],
+        "steering_deg": [],
+        "distance_m": [],
+        "accel_m_s2": [],
+        "lateral_acc_m_s2": [],
+        "battery_pct": [],
+        "distance_front_m": [],
+        "event_code": [],
+        "manoeuvre": [],
+        "terrain_type": [],
+        "weather_condition": [],
+        "gps_lat": [],
+        "gps_lon": [],
+    }
 
     terrain_choices = ["indoor", "outdoor", "street", "forest", "field", "trail", "unknown"]
     weather_choices = ["clear", "rain", "heavy_rain", "wind", "storm", "fog", "snow", "unknown"]
-    terrain_type = rng.choice(terrain_choices, n)
-    weather_condition = rng.choice(weather_choices, n)
 
-    # Generate a GPS path that follows the simulated motion data. The previous
-    # implementation picked a random heading at each step, which produced an
-    # erratic route.  We now integrate the steering angle over time so the
-    # vehicle travels along a coherent path.
-    gps_lat = np.empty(n)
-    gps_lon = np.empty(n)
-    gps_lat[0] = 48.775845
-    gps_lon[0] = 9.182932
-    heading = 0.0
-    for i in range(1, n):
-        step = speed[i] * 1e-5 * rng.uniform(0.8, 1.2)
-        heading += np.radians(steering[i]) / 5
-        gps_lat[i] = gps_lat[i - 1] + step * np.cos(heading)
-        gps_lon[i] = gps_lon[i - 1] + step * np.sin(heading)
-    gps_lat = np.round(gps_lat, 6)
-    gps_lon = np.round(gps_lon, 6)
+    idx = 0
+    for duration, tgt_speed, radius in route:
+        for _ in range(int(duration)):
+            if idx >= n:
+                break
 
-    return pd.DataFrame({
-        "speed_m_s": speed,
-        "rpm": rpm,
-        "steering_deg": steering,
-        "distance_m": distance,
-        "accel_m_s2": accel,
-        "lateral_acc_m_s2": lateral_acc,
-        "battery_pct": battery_pct,
-        "distance_front_m": distance_front,
-        "event_code": event_code,
-        "manoeuvre": manoeuvre,
-        "terrain_type": terrain_type,
-        "weather_condition": weather_condition,
-        "gps_lat": gps_lat,
-        "gps_lon": gps_lon,
-    })
+            # Acceleration toward target speed
+            accel = (tgt_speed - speed) * 0.4
+            accel = float(np.clip(accel, -3.0, 2.0))
+            speed = max(0.0, speed + accel * dt + rng.normal(0, 0.05))
+
+            # Steering from curve radius (positive for left, negative for right)
+            if radius is None:
+                steering = rng.normal(0, 1)
+            else:
+                sign = 1 if radius > 0 else -1
+                r = abs(radius)
+                steering = sign * np.degrees(speed**2 / (r * 9.81))
+                steering += rng.normal(0, 0.5)
+
+            heading += np.radians(steering) * dt
+            step = speed * dt * 1e-5
+            lat += step * np.cos(heading)
+            lon += step * np.sin(heading)
+            battery = max(0.0, battery - (0.002 * speed + 0.001 * abs(accel)) + rng.normal(0, 0.005))
+
+            distance = 35 - 0.4 * speed + rng.normal(0, 2)
+            distance_front = np.clip(30 - 0.25 * abs(steering) + rng.normal(0, 1), 0.5, 100)
+            lateral_acc = (np.radians(steering) * speed**2) / 9.81 + rng.normal(0, 0.05)
+
+            data["speed_m_s"].append(speed)
+            data["rpm"].append(180 * speed + rng.normal(0, 50))
+            data["steering_deg"].append(steering)
+            data["distance_m"].append(distance)
+            data["accel_m_s2"].append(accel)
+            data["lateral_acc_m_s2"].append(lateral_acc)
+            data["battery_pct"].append(battery)
+            data["distance_front_m"].append(distance_front)
+            data["terrain_type"].append(rng.choice(terrain_choices))
+            data["weather_condition"].append(rng.choice(weather_choices))
+            data["gps_lat"].append(round(lat, 6))
+            data["gps_lon"].append(round(lon, 6))
+
+            idx += 1
+            if idx >= n:
+                break
+
+    accel_arr = np.array(data["accel_m_s2"])
+    steering_arr = np.array(data["steering_deg"])
+    speed_arr = np.array(data["speed_m_s"])
+    distance_front_arr = np.array(data["distance_front_m"])
+
+    event_code = [
+        classify_event(s, a, st, d)
+        for s, a, st, d in zip(speed_arr, accel_arr, steering_arr, distance_front_arr)
+    ]
+    manoeuvre = [
+        classify_manoeuvre(s, st, a) for s, st, a in zip(speed_arr, steering_arr, accel_arr)
+    ]
+
+    data["event_code"] = event_code
+    data["manoeuvre"] = manoeuvre
+
+    return pd.DataFrame(data)
 
 if __name__ == "__main__":
     df = simulate_drive_data()
