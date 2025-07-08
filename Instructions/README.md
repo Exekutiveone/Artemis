@@ -41,7 +41,7 @@ Leaflet map.
 
 ### Offline JavaScript libraries
 
-`Chart.js` is bundled in `static/js/Chart.min.js` so the app works without internet
+`Chart.js` is bundled in `static/js/chart.min.js` so the app works without internet
 access.  Additional analysis pages are served at
 `/zweidimensionale_analyse.html` and `/analyse/drive_style.html`.
 
