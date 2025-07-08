@@ -294,6 +294,11 @@ function applyRange() {
 
 
 
+
+}
+
+
+
 function buildSequenceChart(id, dataArray) {
   const ctx = document.getElementById(id).getContext('2d');
   const categories = Array.from(new Set(dataArray));
