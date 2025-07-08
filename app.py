@@ -16,8 +16,11 @@ CSV_PATH = Path(__file__).resolve().parent / "Data Base" / "fahrtanalyse_daten.c
 
 # Templates are stored in the "template" directory
 app = Flask(__name__, template_folder="template")
-app.config['TEMPLATES_AUTO_RELOAD'] = True
-app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Verhindert Browser-Caching statischer Dateien
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = (
+    0  # Verhindert Browser-Caching statischer Dateien
+)
+
 
 def load_series():
     df = pd.read_csv(CSV_PATH)
@@ -54,16 +57,10 @@ def load_aggregates():
         "distance_front_m",
     ]
     by_weather = (
-        df.groupby("weather_condition")[numeric]
-        .mean()
-        .round(2)
-        .to_dict(orient="index")
+        df.groupby("weather_condition")[numeric].mean().round(2).to_dict(orient="index")
     )
     by_terrain = (
-        df.groupby("terrain_type")[numeric]
-        .mean()
-        .round(2)
-        .to_dict(orient="index")
+        df.groupby("terrain_type")[numeric].mean().round(2).to_dict(orient="index")
     )
     return {"by_weather": by_weather, "by_terrain": by_terrain}
 
@@ -71,6 +68,7 @@ def load_aggregates():
 def load_analysis_results():
     """Return regression analysis data computed from the CSV."""
     return compute_regression_pairs(str(CSV_PATH))
+
 
 @app.route("/")
 def index():
@@ -81,34 +79,41 @@ def index():
 def chart():
     idx, series = load_series()
     analysis = load_analysis_results()
-    aggregates = load_aggregates()
-    return render_template("chart.html", idx=idx, series=series, analysis=analysis, aggregates=aggregates)
+    return render_template("chart.html", idx=idx, series=series, analysis=analysis)
+
 
 @app.route("/terrain")
 def terrain_page():
     """Separate page showing Wetterdaten charts."""
     idx, series = load_series()
     aggregates = load_aggregates()
-    return render_template("terrain.html", idx=idx, series=series, aggregates=aggregates)
-
+    return render_template(
+        "terrain.html", idx=idx, series=series, aggregates=aggregates
+    )
 
 
 @app.route("/zweidimensionale_analyse.html")
 def zweidimensionale_analyse():
     """Serve the zweidimensionale Analyse page."""
-    return send_from_directory(os.path.join(app.root_path, "Driving Analysis"), "zweidimensionale_analyse.html")
+    return send_from_directory(
+        os.path.join(app.root_path, "Driving Analysis"), "zweidimensionale_analyse.html"
+    )
 
 
 @app.route("/analyse/drive_style.html")
 def drive_style_html():
     """Serve the drive style analysis page."""
-    return send_from_directory(os.path.join(app.root_path, "Driving Analysis"), "drive_style.html")
+    return send_from_directory(
+        os.path.join(app.root_path, "Driving Analysis"), "drive_style.html"
+    )
 
 
 @app.route("/analyse/drive_style.js")
 def drive_style_js():
     """Serve the drive style script."""
-    return send_from_directory(os.path.join(app.root_path, "static/js"), "drive_style_analysis.js")
+    return send_from_directory(
+        os.path.join(app.root_path, "static/js"), "drive_style_analysis.js"
+    )
 
 
 @app.route("/api/drive_style")
@@ -132,11 +137,10 @@ def regression_pairs_api():
     return jsonify(data)
 
 
-
-
 # ---------------------------------------------------------------
 # Terrain map
 # ---------------------------------------------------------------
+
 
 @app.route("/terrain/")
 def terrain_index():
@@ -161,6 +165,7 @@ def aggregates_api():
 # Trajectory visualisation
 # ---------------------------------------------------------------
 
+
 @app.route("/trajectory/")
 def trajectory_index():
     """Serve the trajectory visualisation page."""
@@ -171,6 +176,7 @@ def trajectory_index():
 def trajectory_files(filename):
     """Serve static files for the trajectory page."""
     return send_from_directory(os.path.join(app.root_path, "trajectory"), filename)
+
 
 if __name__ == "__main__":
     app.run(debug=True)

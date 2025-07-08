@@ -71,32 +71,4 @@ function computeTrend(data) {
 }
 
 
-function computeFFT(data) {
-  const n = data.length;
-  const mags = [];
-  for (let k = 0; k < n; k++) {
-    let re = 0;
-    let im = 0;
-    for (let t = 0; t < n; t++) {
-      const angle = (2 * Math.PI * t * k) / n;
-      re += data[t] * Math.cos(angle);
-      im -= data[t] * Math.sin(angle);
-    }
-    mags.push(Math.sqrt(re * re + im * im) / n);
-  }
-  return mags.slice(0, Math.floor(n / 2));
-}
-
-function computeDominantFreqIndex(data) {
-  const mags = computeFFT(data);
-  let max = -Infinity;
-  let idx = 0;
-  for (let i = 0; i < mags.length; i++) {
-    if (mags[i] > max) {
-      max = mags[i];
-      idx = i;
-    }
-  }
-  return idx;
-}
 
