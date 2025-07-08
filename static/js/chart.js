@@ -29,6 +29,7 @@ const chartData = [
 
 const chartRefs = {};
 const histogramRefs = {};
+const sequenceChartRefs = {};
 const MA_WINDOW = 10;
 
 function insertChartBoxes() {
@@ -293,3 +294,46 @@ function applyRange() {
 
 
 
+
+}
+
+
+
+
+}
+
+
+
+function buildSequenceChart(id, dataArray) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const categories = Array.from(new Set(dataArray));
+  const mapping = {};
+  categories.forEach((k, i) => { mapping[k] = i; });
+  const numeric = dataArray.map(v => mapping[v]);
+  const labels = labelsFull.map(String);
+  if (sequenceChartRefs[id]) sequenceChartRefs[id].destroy();
+  sequenceChartRefs[id] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ label: id, data: numeric, stepped: true, borderColor: '#3498db', pointRadius: 0, fill: false }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'Index', color: '#f8f9fa' }, ticks: { color: '#f8f9fa' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+        y: {
+          ticks: { callback: v => categories[v], color: '#f8f9fa' },
+          grid: { color: 'rgba(255,255,255,0.1)' },
+          title: { display: true, text: 'Kategorie', color: '#f8f9fa' }
+        }
+      },
+      plugins: { legend: { labels: { color: '#f8f9fa' } } }
+    }
+  });
+}
+
+
+
+document.addEventListener('DOMContentLoaded', () => {
+  buildSequenceChart('weatherSeqChart', sFull.weather_condition);
+  buildSequenceChart('terrainSeqChart', sFull.terrain_type);
+});
