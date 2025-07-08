@@ -30,6 +30,8 @@ const chartData = [
 const chartRefs = {};
 const histogramRefs = {};
 const fftRefs = {};
+const aggregateChartRefs = {};
+const sequenceChartRefs = {};
 const MA_WINDOW = 10;
 
 function insertChartBoxes() {
@@ -282,17 +284,13 @@ function applyRange() {
     const e = sFull.event[i];
     const m = sFull.manoeuvre[i];
     const t = sFull.terrain_type[i];
-    const w = sFull.weather_condition[i];
     const lat = Number(sFull.gps_lat[i]).toFixed(6);
     const lon = Number(sFull.gps_lon[i]).toFixed(6);
-    const weatherStyle = w === 'heavy_rain'
-      ? " style=\"background-color:#660000;\" title=\"Heavy rain\""
-      : "";
     eventFreq[e] = (eventFreq[e] || 0) + 1;
     manoeuvreFreq[m] = (manoeuvreFreq[m] || 0) + 1;
     tbody.insertAdjacentHTML(
       "beforeend",
-      `<tr><td>${i}</td><td>${e}</td><td>${m}</td><td>${t}</td><td${weatherStyle}>${w}</td><td>${lat}</td><td>${lon}</td></tr>`
+      `<tr><td>${i}</td><td>${e}</td><td>${m}</td><td>${t}</td><td>${lat}</td><td>${lon}</td></tr>`
     );
   }
 
@@ -315,3 +313,80 @@ function applyRange() {
   buildFFTChart('fft_speed', sFull.speed.slice(start, end));
   buildFFTChart('fft_accel', sFull.accel.slice(start, end));
 }
+
+function buildAggregateChart(id, labels, values) {
+  const ctx = document.getElementById(id).getContext('2d');
+  if (aggregateChartRefs[id]) aggregateChartRefs[id].destroy();
+  aggregateChartRefs[id] = new Chart(ctx, {
+    type: 'bar',
+    data: { labels: labels, datasets: [{ label: 'Geschwindigkeit (m/s)', data: values, backgroundColor: '#1abc9c' }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { ticks: { color: '#f8f9fa' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+        y: { ticks: { color: '#f8f9fa' }, grid: { color: 'rgba(255,255,255,0.1)' }, title: { display: true, text: 'Geschwindigkeit (m/s)', color: '#f8f9fa' } }
+      },
+      plugins: { legend: { labels: { color: '#f8f9fa' } } }
+    }
+  });
+}
+
+function buildSequenceChart(id, dataArray) {
+  const ctx = document.getElementById(id).getContext('2d');
+  const categories = Array.from(new Set(dataArray));
+  const mapping = {};
+  categories.forEach((k, i) => { mapping[k] = i; });
+  const numeric = dataArray.map(v => mapping[v]);
+  const labels = labelsFull.map(String);
+  if (sequenceChartRefs[id]) sequenceChartRefs[id].destroy();
+  sequenceChartRefs[id] = new Chart(ctx, {
+    type: 'line',
+    data: { labels: labels, datasets: [{ label: id, data: numeric, stepped: true, borderColor: '#3498db', pointRadius: 0, fill: false }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        x: { title: { display: true, text: 'Index', color: '#f8f9fa' }, ticks: { color: '#f8f9fa' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+        y: {
+          ticks: { callback: v => categories[v], color: '#f8f9fa' },
+          grid: { color: 'rgba(255,255,255,0.1)' },
+          title: { display: true, text: 'Kategorie', color: '#f8f9fa' }
+        }
+      },
+      plugins: { legend: { labels: { color: '#f8f9fa' } } }
+    }
+  });
+}
+
+function updateAggregateCharts() {
+  if (typeof aggregatesData === 'undefined') return;
+  const tSel = document.getElementById('terrainSelect');
+  const tKeys = Array.from(tSel.selectedOptions).map(o => o.value);
+  const terrainLabels = tKeys.length ? tKeys : Object.keys(aggregatesData.by_terrain);
+
+  const terrainPairs = terrainLabels.map(k => [k, aggregatesData.by_terrain[k].speed_m_s]);
+  terrainPairs.sort((a, b) => b[1] - a[1]);
+
+  const sortedTerrainLabels = terrainPairs.map(p => p[0]);
+  const sortedTerrainValues = terrainPairs.map(p => p[1]);
+  buildAggregateChart('terrainAggChart', sortedTerrainLabels, sortedTerrainValues);
+}
+
+function initAggregateFilters() {
+  if (typeof aggregatesData === 'undefined') return;
+  const tSel = document.getElementById('terrainSelect');
+  Object.keys(aggregatesData.by_terrain).forEach(k => {
+    const opt = document.createElement('option');
+    opt.value = k;
+    opt.textContent = k;
+    tSel.appendChild(opt);
+  });
+  tSel.addEventListener('change', updateAggregateCharts);
+  updateAggregateCharts();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initAggregateFilters();
+  buildSequenceChart('terrainSeqChart', sFull.terrain_type);
+});

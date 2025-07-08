@@ -58,6 +58,31 @@
     <h1 class="mb-2">Fahrtanalyse</h1>
     <p class="mb-4">Zeitreihenübersicht aller Sensorkanäle einer simulierten Fahrt.</p>
 
+    <div class="row mb-4">
+      <div class="col-sm-6 col-md-3">
+        <label class="form-label">Terrainauswahl</label>
+        <select id="terrainSelect" class="form-select" multiple></select>
+      </div>
+    </div>
+
+    <div class="mb-4" id="aggregateSection">
+      <h2 class="mb-3">Durchschnittswerte</h2>
+      <div class="row">
+        <div class="col-12 col-md-6">
+          <canvas id="terrainAggChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4" id="sequenceSection">
+      <h2 class="mb-3">Verlauf des Terrains</h2>
+      <div class="row">
+        <div class="col-12 col-md-6">
+          <canvas id="terrainSeqChart"></canvas>
+        </div>
+      </div>
+    </div>
+
     <div class="row mb-3">
       <div class="col-sm-6 col-md-3">
         <label class="form-label">Startindex</label>
@@ -83,7 +108,6 @@
             <th>Event-Code</th>
             <th>Manöver</th>
             <th>Terrain</th>
-            <th>Wetter</th>
             <th>Breitengrad</th>
             <th>Längengrad</th>
           </tr>
@@ -104,6 +128,7 @@
   <script>
     const labelsFull = {{ idx|tojson|safe }};
     const sFull = {{ series|tojson|safe }};
+    const aggregatesData = {{ aggregates|tojson|safe }};
   </script>
   <script src="{{ url_for('static', filename='js/calculate.js') }}"></script>
   <script src="{{ url_for('static', filename='js/boxplot.js') }}"></script>
