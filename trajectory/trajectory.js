@@ -31,7 +31,7 @@ function colorForSpeed(speed, max) {
 
 function loadTrajectory() {
   const limit = Number(document.getElementById('pointSlider').value);
-  fetch(`/api/series?limit=${limit}`)
+  fetch(`/api/trajectory_series?limit=${limit}`)
     .then(r => r.json())
     .then(d => drawTrajectory(d, limit));
 }

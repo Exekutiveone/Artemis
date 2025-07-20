@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
-from flask import Flask, render_template, send_from_directory, jsonify
+from flask import (
+    Flask,
+    render_template,
+    send_from_directory,
+    jsonify,
+    request,
+)
 import pandas as pd
 from pathlib import Path
 import os
 import sys
+import numpy as np
 
 # Allow imports from the "Driving Data" folder
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "Driving Data"))
 
 from analysis_utils import compute_regression_pairs, compute_drive_style_series
+from Test_Set import simulate_drive_data
 
 
 # CSV data is stored inside the "Data Base" directory
@@ -178,8 +186,8 @@ def trajectory_files(filename):
     return send_from_directory(os.path.join(app.root_path, "trajectory"), filename)
 
 
-@app.route('/api/series')
-def api_series():
+@app.route('/api/trajectory_series')
+def trajectory_series():
     try:
         limit = int(request.args.get('limit', 1000))
         full_df = simulate_drive_data(n=10000)

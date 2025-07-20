@@ -48,7 +48,7 @@ function clearCanvas(){
 function loadTrajectory(){
   const limit=Number(slider.value);
   if(limit===0){clearCanvas();return;}
-  fetch(`/api/series?limit=${limit}`)
+  fetch(`/api/trajectory_series?limit=${limit}`)
     .then(r=>r.json())
     .then(d=>drawTrajectory(d,limit));
 }
